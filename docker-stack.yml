@@ -1,0 +1,50 @@
+services:
+    shlink:
+        image: shlinkio/shlink:4.1.1-roadrunner
+        environment:
+            DEFAULT_DOMAIN: go.juancer.me
+            IS_HTTPS_ENABLED: "true"
+            DEFAULT_BASE_URL_REDIRECT: https://juancer.me
+            DISABLE_TRACKING: "true"
+            DEFAULT_QR_CODE_MARGIN: 2
+            DB_DRIVER: postgres
+            DB_HOST: shlink_db
+            DB_USER: /run/secrets/db_user
+            DB_PASSWORD: /run/secrets/db_password
+        secrets:
+            - "db_user"
+            - "db_password"
+        ports:
+            - "8080:8080"
+        depends_on:
+            - "shlink_db"
+        healthcheck:
+            test: ["CMD", "curl", "-f", "http://localhost:8080/rest/health"]
+            interval: 30s
+            timeout: 10s
+            retries: 3
+
+    shlink_db:
+        image: postgres:12.2-alpine
+        ports:
+            - "5434:5432"
+        environment:
+            POSTGRES_DB: shlink
+            PGDATA: /var/lib/postgresql/data/pgdata
+            restart: always
+            POSTGRES_PASSWORD: /run/secrets/db_password
+            POSTGRES_USER: /run/secrets/db_user
+        secrets:
+            - db_user
+            - db_password
+        healthcheck:
+            test: ["CMD-SHELL", "pg_isready"]
+            interval: 10s
+            timeout: 5s
+            retries: 10
+
+secrets:
+  db_password:
+    external: true
+  db_user:
+    external: true
